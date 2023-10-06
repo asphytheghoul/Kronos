@@ -8,7 +8,21 @@ from ..data.loader import DataSchema
 from . import ids
 
 
+def resample_to_daily(data):
+    data[DataSchema.DATE] = pd.to_datetime(data[DataSchema.DATE], utc=True)
+    # Set 'date' column as index
+    data.set_index(DataSchema.DATE, inplace=True)
+    df_daily = data.resample("D").agg(
+        {"open": "first", "high": "max", "low": "min", "close": "last"}
+    )
+    df_daily.dropna(inplace=True)
+    return df_daily
+
+
 def calculate_moving_averages(data):
+    data = resample_to_daily(data)
+    data.reset_index(inplace=True)
+    data["date"] = pd.to_datetime(data["date"], utc=True)
     data["30_day_ma"] = data[DataSchema.CLOSE].rolling(window=30).mean()
     data["90_day_ma"] = data[DataSchema.CLOSE].rolling(window=90).mean()
     return data
@@ -39,23 +53,16 @@ def calculate_hourly_moving_averages(data):
 
 
 def calculate_weekly_moving_averages(data):
-    data.set_index(DataSchema.DATE, inplace=True)
-    data["30_weekly_ma"] = data[DataSchema.CLOSE].rolling(window=30).mean()
-
-    data["90_weekly_ma"] = data[DataSchema.CLOSE].rolling(window=90).mean()
+    data = resample_to_daily(data)
     data.reset_index(inplace=True)
+    data["date"] = pd.to_datetime(data["date"], utc=True)
+    data["30_weekly_ma"] = data.groupby(pd.Grouper(key=DataSchema.DATE, freq="W"))[
+        DataSchema.CLOSE
+    ].transform(lambda x: x.rolling(window=30, min_periods=1).mean())
+    data["90_weekly_ma"] = data.groupby(pd.Grouper(key=DataSchema.DATE, freq="W"))[
+        DataSchema.CLOSE
+    ].transform(lambda x: x.rolling(window=90, min_periods=1).mean())
     return data
-
-
-def resample_to_daily(data):
-    data[DataSchema.DATE] = pd.to_datetime(data[DataSchema.DATE], utc=True)
-    # Set 'date' column as index
-    data.set_index(DataSchema.DATE, inplace=True)
-    df_daily = data.resample("D").agg(
-        {"open": "first", "high": "max", "low": "min", "close": "last"}
-    )
-    df_daily.dropna(inplace=True)
-    return df_daily
 
 
 def render(app: Dash, data: pd.DataFrame) -> html.Div:
@@ -205,7 +212,12 @@ def render(app: Dash, data: pd.DataFrame) -> html.Div:
                 low=df_daily["low"],
                 close=df_daily["close"],
             )
-        ]
+        ],
+        layout=go.Layout(
+            template="plotly_dark",
+            font=dict(family="Arial", size=18, color="#7f7f7f"),
+            # Set background color to white
+        ),
     )
     alldays = set(
         df_daily.index[0] + pd.Timedelta(days=x)
@@ -217,7 +229,11 @@ def render(app: Dash, data: pd.DataFrame) -> html.Div:
         rangebreaks=[dict(values=missing)],
     )
 
-    candlestick_fig.update_layout(title=f"Google Stock candlestick chart")
+    candlestick_fig.update_layout(
+        title=f"Google Stock candlestick chart",
+        xaxis_showgrid=False,
+        yaxis_showgrid=False,
+    )
 
     candlestick_graph = dcc.Graph(
         figure=candlestick_fig, style={"height": "40%", "margin": "auto"}
@@ -273,6 +289,7 @@ def render(app: Dash, data: pd.DataFrame) -> html.Div:
     )
     def update_line_chart(interval: str) -> go.Figure:
         fig = go.Figure()
+        interval = "Daily"
         nonlocal data_avg
         if interval == "Hourly":
             data_avg = calculate_hourly_moving_averages(data_avg.copy())
@@ -292,7 +309,9 @@ def render(app: Dash, data: pd.DataFrame) -> html.Div:
                 y=data_avg[DataSchema.CLOSE],
                 mode="lines",
                 name="Stock Price",
-            )
+                # Thickness of the line (default = 2)
+                line=dict(color="#f2f2f2", width=3),
+            ),
         )
         fig.add_trace(
             go.Scatter(
@@ -300,7 +319,7 @@ def render(app: Dash, data: pd.DataFrame) -> html.Div:
                 y=data_avg[ma_30_col],
                 mode="lines",
                 name="30-day MA",
-                line=dict(color="red"),
+                line=dict(color="#9467bd", dash="dot"),
             )
         )
         fig.add_trace(
@@ -309,7 +328,7 @@ def render(app: Dash, data: pd.DataFrame) -> html.Div:
                 y=data_avg[ma_90_col],
                 mode="lines",
                 name="90-day MA",
-                line=dict(color="blue"),
+                line=dict(color="#1f77b4", dash="dot"),
             )
         )
         fig.update_layout(
@@ -317,6 +336,10 @@ def render(app: Dash, data: pd.DataFrame) -> html.Div:
             xaxis_title="Date",
             yaxis_title="Price",
             legend=dict(x=0, y=1),
+            template="plotly_dark",
+            font=dict(family="Arial", size=18, color="#7f7f7f"),
+            xaxis_showgrid=False,
+            yaxis_showgrid=False,
         )
 
         return fig

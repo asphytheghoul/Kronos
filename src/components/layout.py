@@ -5,7 +5,7 @@ import pandas as pd
 from . import bar_chart, month_dropdown, day_dropdown, time_dropdown
 
 
-def create_layout(app: Dash, data:pd.DataFrame) -> html.Div:
+def create_layout(app: Dash, data: pd.DataFrame) -> html.Div:
     return html.Div(
         className="app-div",
         children=[
@@ -19,6 +19,7 @@ def create_layout(app: Dash, data:pd.DataFrame) -> html.Div:
                     time_dropdown.render(app, data),
                 ],
             ),
-            bar_chart.render(app, data)
+            bar_chart.render(app, data),
         ],
+        style={"textAlign": "center"},
     )
