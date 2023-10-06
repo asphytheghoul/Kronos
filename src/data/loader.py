@@ -1,5 +1,6 @@
 import pandas as pd
 
+
 class DataSchema:
     TICKER = "ticker"
     NAME = "name"
@@ -15,7 +16,12 @@ class DataSchema:
     TIME = "time"
     DATE_ONLY = "date_only"
 
-def load_data(path: str) -> pd.DataFrame:#modify this as required later to query db instead of reading from csv
+
+def load_data(
+    path: str,
+) -> (
+    pd.DataFrame
+):  # modify this as required later to query db instead of reading from csv
     data = pd.read_csv(
         path,
         dtype={
@@ -32,9 +38,11 @@ def load_data(path: str) -> pd.DataFrame:#modify this as required later to query
     )
 
     # Extract day, month, and time from the "date" column
-    data[DataSchema.TIME] = data[DataSchema.DATE].str.split(' ').str[1].astype(str)
-    data[DataSchema.DATE_ONLY] = data[DataSchema.DATE].str.split(' ').str[0]
-    data[DataSchema.DAY] = data[DataSchema.DATE_ONLY].str.split('-').str[2].astype(str)
-    data[DataSchema.MONTH] = data[DataSchema.DATE_ONLY].str.split('-').str[1].astype(str)
+    data[DataSchema.TIME] = data[DataSchema.DATE].str.split(" ").str[1].astype(str)
+    data[DataSchema.DATE_ONLY] = data[DataSchema.DATE].str.split(" ").str[0]
+    data[DataSchema.DAY] = data[DataSchema.DATE_ONLY].str.split("-").str[2].astype(str)
+    data[DataSchema.MONTH] = (
+        data[DataSchema.DATE_ONLY].str.split("-").str[1].astype(str)
+    )
 
     return data
