@@ -12,6 +12,14 @@ def calculate_moving_averages(data):
     data['90_day_ma'] = data[DataSchema.CLOSE].rolling(window=90).mean()
     return data
 
+def calculate_gain(data):
+    data["gain"] = (data[DataSchema.CLOSE] - data[DataSchema.OPEN])/data[DataSchema.OPEN] * 100
+    return data
+
+def calculate_loss(data):
+    data["loss"] = (data[DataSchema.OPEN]-data[DataSchema.CLOSE])/data[DataSchema.OPEN] * 100
+    return data
+
 def calculate_hourly_moving_averages(data):
     data['30_hourly_ma'] = data.groupby(pd.Grouper(key=DataSchema.DATE, freq='H'))[DataSchema.CLOSE].transform(
         lambda x: x.rolling(window=30, min_periods=1).mean()
@@ -154,8 +162,8 @@ def render(app: Dash, data: pd.DataFrame) -> html.Div:
                 close=data[DataSchema.CLOSE])])
 
     candlestick_fig.update_layout(title='Apple stock candlestick chart')
-    candlestick_graph = dcc.Graph(figure=candlestick_fig, style={'width': '50%', 'height': '40%', 'margin': 'auto'})
-    bar_chart_div = html.Div(id=ids.BAR_CHART, style={'width': '50%', 'height': '40%', 'margin': 'auto'})
+    candlestick_graph = dcc.Graph(figure=candlestick_fig, style={'height': '40%', 'margin': 'auto'})
+    bar_chart_div = html.Div(id=ids.BAR_CHART, style={'height': '40%', 'margin': 'auto'})
 
     graph_div = html.Div(
         children=[candlestick_graph, bar_chart_div],
@@ -190,8 +198,7 @@ def render(app: Dash, data: pd.DataFrame) -> html.Div:
 
         return fig
 
-    #### INSERT HERE ####
-    line_chart_div = dcc.Graph(id=ids.LINE_CHART)
+    line_chart_div = dcc.Graph(id=ids.LINE_CHART,style={'height': '40%', 'margin': 'auto'})
     @app.callback(
         Output(ids.LINE_CHART, "figure"),
         [
@@ -214,26 +221,86 @@ def render(app: Dash, data: pd.DataFrame) -> html.Div:
             ma_90_col = '90_weekly_ma'
         
         fig.add_trace(go.Scatter(x=data_avg[DataSchema.DATE], y=data_avg[DataSchema.CLOSE], mode='lines', name='Stock Price'))
-        
-        # Add the 30-day moving average line in red
         fig.add_trace(go.Scatter(x=data_avg[DataSchema.DATE], y=data_avg[ma_30_col], mode='lines', name='30-day MA', line=dict(color='red')))
-        
-        # Add the 90-day moving average line in blue
         fig.add_trace(go.Scatter(x=data_avg[DataSchema.DATE], y=data_avg[ma_90_col], mode='lines', name='90-day MA', line=dict(color='blue')))
-        
         fig.update_layout(title=f'Stock Price and Moving Averages ({interval} interval)',
                           xaxis_title='Date', yaxis_title='Price',
                           legend=dict(x=0, y=1))
 
         return fig
 
+    ### INSERT HERE ###
+    top_gainers_bar_chart = dcc.Graph(id=ids.TOP_GAINERS_BAR_CHART, style={'height': '40%', 'margin': 'auto'})
+    @app.callback(
+    Output(ids.TOP_GAINERS_BAR_CHART, "figure"),
+    [
+        Input(ids.START_RANGE_DROPDOWN, "value"),
+        Input(ids.END_RANGE_DROPDOWN, "value"),
+    ],
+    )
+    def update_top_gainers_bar_chart(start_date: int, end_date: int) -> go.Figure:
+        start_date = pd.Timestamp(start_date * 86400, unit="s",tz="UTC")
+        end_date = pd.Timestamp(end_date * 86400, unit="s",tz="UTC")
+        data["date"] = pd.to_datetime(data["date"],utc=True)
+        filtered_data = data.query(
+            "@start_date <= date <= @end_date"
+        )
+
+        filtered_data = calculate_gain(filtered_data)
+
+        top_gainers = filtered_data.sort_values(by='gain', ascending=False).head(3)
+        print(top_gainers)
+        fig = px.bar(
+            top_gainers,
+            x='gain',
+            y=DataSchema.DATE,
+            orientation='h',
+            labels={DataSchema.DATE: 'Date'},
+            title='Top 3 Gainers',
+        )
+
+        return fig
+    
+    top_losers_bar_chart = dcc.Graph(id=ids.TOP_LOSERS_BAR_CHART, style={'height': '40%', 'margin': 'auto'})
+    @app.callback(
+    Output(ids.TOP_LOSERS_BAR_CHART, "figure"),
+    [
+        Input(ids.START_RANGE_DROPDOWN, "value"),
+        Input(ids.END_RANGE_DROPDOWN, "value"),
+    ],
+    )
+    def update_top_losers_bar_chart(start_date: int, end_date: int) -> go.Figure:
+        start_date = pd.Timestamp(start_date * 86400, unit="s",tz="UTC")
+        end_date = pd.Timestamp(end_date * 86400, unit="s",tz="UTC")
+        data["date"] = pd.to_datetime(data["date"],utc=True)
+        filtered_data = data.query(
+            "@start_date <= date <= @end_date"
+        )
+
+        filtered_data = calculate_loss(filtered_data)
+
+        top_losers = filtered_data.sort_values(by='loss', ascending=False).head(3)
+        print(top_losers)
+        fig = px.bar(
+            top_losers,
+            x='loss',
+            y=DataSchema.DATE,
+            orientation='h',
+            labels={DataSchema.DATE: 'Date'},
+            title='Top 3 Losers',
+        )
+
+        return fig
+    
     return html.Div([
         range_dropdowns_div,
-        graph_div,
+        # graph_div,
+        candlestick_graph,
         html.Div([
             html.H4("Choose the type of View: "),
             choose_option_dropdown,
-        ],style={"margin-left": "10px"}),
-        line_chart_div
-        # line_chart_div
-    ])
+        ],style={"margin-right": "10px"}),
+        line_chart_div,
+        top_gainers_bar_chart,
+        top_losers_bar_chart
+    ],style={'width': '50%', "display":"inline-block","float":"right"})
