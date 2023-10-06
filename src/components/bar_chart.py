@@ -65,7 +65,8 @@ def calculate_weekly_moving_averages(data):
     return data
 
 
-def render(app: Dash, data: pd.DataFrame) -> html.Div:
+def render(app: Dash, data: list[pd.DataFrame]) -> html.Div:
+    data,data2 = data
     data_avg = calculate_moving_averages(data.copy())
     min_date = int(pd.Timestamp(data[DataSchema.DATE].min()).timestamp() / 86400)
     max_date = int(pd.Timestamp(data[DataSchema.DATE].max()).timestamp() / 86400)
@@ -163,9 +164,9 @@ def render(app: Dash, data: pd.DataFrame) -> html.Div:
         ],
     )
     def update_bar_chart(date_value: int) -> html.Div:
-        date = pd.Timestamp(date_value * 86400, unit="s").strftime("%Y-%m-%d")
+        data["date"] = pd.Timestamp(date_value * 86400, unit="s").strftime("%Y-%m-%d")
         # print(date)
-        filtered_data = data.query("date == @date")
+        filtered_data = data.query(f"date == @date")
 
         if filtered_data.shape[0] == 0:
             return html.Div("No data selected.", id=ids.BAR_CHART)
@@ -201,7 +202,7 @@ def render(app: Dash, data: pd.DataFrame) -> html.Div:
             id=ids.BAR_CHART,
         )
 
-    df_daily = resample_to_daily(data)
+    df_daily = resample_to_daily(data2)
 
     candlestick_fig = go.Figure(
         data=[
@@ -221,7 +222,7 @@ def render(app: Dash, data: pd.DataFrame) -> html.Div:
     )
     alldays = set(
         df_daily.index[0] + pd.Timedelta(days=x)
-        for x in range((data.index[-1] - data.index[0]).days)
+        for x in range((data2.index[-1] - data2.index[0]).days)
     )
     missing = sorted(set(alldays) - set(df_daily.index))
 
@@ -259,7 +260,7 @@ def render(app: Dash, data: pd.DataFrame) -> html.Div:
         ],
     )
     def update_candlestick_chart(start_date: int, end_date: int) -> go.Figure:
-        filtered_data = data.query("@start_date <= date <= @end_date")
+        filtered_data = data2.query("@start_date <= date <= @end_date")
 
         fig = go.Figure(
             data=[
@@ -359,8 +360,8 @@ def render(app: Dash, data: pd.DataFrame) -> html.Div:
     def update_top_gainers_bar_chart(start_date: int, end_date: int) -> go.Figure:
         start_date = pd.Timestamp(start_date * 86400, unit="s", tz="UTC")
         end_date = pd.Timestamp(end_date * 86400, unit="s", tz="UTC")
-        data["date"] = pd.to_datetime(data["date"], utc=True)
-        filtered_data = data.query("@start_date <= date <= @end_date")
+        # data["date"] = pd.to_datetime(data["date"], utc=True)
+        filtered_data = data2.query("@start_date <= date <= @end_date")
 
         filtered_data = calculate_gain(filtered_data)
 
@@ -369,7 +370,7 @@ def render(app: Dash, data: pd.DataFrame) -> html.Div:
         fig = px.bar(
             top_gainers,
             x="gain",
-            y=DataSchema.DATE,
+            y="date_only",
             orientation="h",
             labels={DataSchema.DATE: "Date"},
             title="Top 3 Gainers",
@@ -391,8 +392,8 @@ def render(app: Dash, data: pd.DataFrame) -> html.Div:
     def update_top_losers_bar_chart(start_date: int, end_date: int) -> go.Figure:
         start_date = pd.Timestamp(start_date * 86400, unit="s", tz="UTC")
         end_date = pd.Timestamp(end_date * 86400, unit="s", tz="UTC")
-        data["date"] = pd.to_datetime(data["date"], utc=True)
-        filtered_data = data.query("@start_date <= date <= @end_date")
+        # data["date"] = pd.to_datetime(data["date"], utc=True)
+        filtered_data = data2.query("@start_date <= date <= @end_date")
 
         filtered_data = calculate_loss(filtered_data)
 
@@ -401,7 +402,7 @@ def render(app: Dash, data: pd.DataFrame) -> html.Div:
         fig = px.bar(
             top_losers,
             x="loss",
-            y=DataSchema.DATE,
+            y="date_only",
             orientation="h",
             labels={DataSchema.DATE: "Date"},
             title="Top 3 Losers",

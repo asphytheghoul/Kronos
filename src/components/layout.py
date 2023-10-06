@@ -5,7 +5,7 @@ import pandas as pd
 from . import bar_chart, month_dropdown, day_dropdown, time_dropdown
 
 
-def create_layout(app: Dash, data: pd.DataFrame) -> html.Div:
+def create_layout(app: Dash, data: list[pd.DataFrame]) -> html.Div:
     return html.Div(
         className="app-div",
         children=[
@@ -14,9 +14,9 @@ def create_layout(app: Dash, data: pd.DataFrame) -> html.Div:
             html.Div(
                 className="dropdown-container",
                 children=[
-                    month_dropdown.render(app, data),
-                    day_dropdown.render(app, data),
-                    time_dropdown.render(app, data),
+                    month_dropdown.render(app, data[0]),
+                    day_dropdown.render(app, data[0]),
+                    time_dropdown.render(app, data[0]),
                 ],
             ),
             bar_chart.render(app, data),
