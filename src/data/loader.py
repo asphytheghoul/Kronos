@@ -44,5 +44,4 @@ def load_data(
     data[DataSchema.MONTH] = (
         data[DataSchema.DATE_ONLY].str.split("-").str[1].astype(str)
     )
-
     return data
