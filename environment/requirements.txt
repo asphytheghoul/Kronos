@@ -5,3 +5,4 @@ pandas
 pandas-stubs
 plotly
 python-i18n[YAML]
+psycopg2
