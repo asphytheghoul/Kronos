@@ -2,3 +2,4 @@ AWS.pem
 a.py
 .DS_Store
 *.pyc
+.env
