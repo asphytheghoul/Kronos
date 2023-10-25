@@ -35,7 +35,7 @@ def query_stock_data_by_date_range(CONNECTION, ticker, start_date, end_date):
     conn.close()
 
 # Example usage:
-CONNECTION = "postgres://postgres:timescale@13.233.139.76:5432/tsdb"
+CONNECTION = CONNECTION_STRING
 ticker = "GOOGL"  # Replace with the desired company's ticker symbol
 start_date = "2021-01-04"  # Replace with the desired start date
 end_date = "2021-01-31"  # Replace with the desired end date
