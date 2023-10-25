@@ -2,7 +2,6 @@ import pandas as pd
 from dash import Dash, dcc, html
 from dash.dependencies import Input, Output
 
-from ..data.loader import DataSchema
 from . import ids
 
 

@@ -1,0 +1,15 @@
+class DataSchema:
+    TICKER = "ticker"
+    NAME = "name"
+    OPEN = "open"
+    HIGH = "high"
+    LOW = "low"
+    CLOSE = "close"
+    ADJUSTED_CLOSE = "adjusted close"
+    VOLUME = "volume"
+    DATE = "date"
+    DAY = "day"
+    MONTH = "month"
+    TIME = "time"
+    DATE_ONLY = "date_only"
+
